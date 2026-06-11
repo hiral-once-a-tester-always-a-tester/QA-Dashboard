@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Autonomous QA Dashboard</title>
+  <style>
+    :root{
+      --bg:#0b1020; --panel:#121933; --panel2:#192346; --text:#eef3ff; --muted:#aab6d3;
+      --accent:#6ea8fe; --ok:#27c281; --warn:#ffb020; --bad:#ff6b6b; --line:#2b3761;
+    }
+    *{box-sizing:border-box} body{margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;background:linear-gradient(180deg,#09101f,#0b1020 30%);color:var(--text)}
+    header{padding:24px 24px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(11,16,32,.96);backdrop-filter:blur(8px);z-index:5}
+    h1{margin:0 0 8px;font-size:28px} .sub{color:var(--muted);max-width:980px;line-height:1.45}
+    .toolbar{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px}
+    select,button,input{background:var(--panel);border:1px solid var(--line);color:var(--text);padding:10px 12px;border-radius:10px}
+    button{cursor:pointer} button.active{background:var(--accent);color:#081226;border-color:transparent;font-weight:700}
+    main{padding:24px;display:grid;gap:18px}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:18px}
+    .card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 12px 24px rgba(0,0,0,.16)}
+    .span-3{grid-column:span 3}.span-4{grid-column:span 4}.span-5{grid-column:span 5}.span-6{grid-column:span 6}.span-7{grid-column:span 7}.span-8{grid-column:span 8}.span-12{grid-column:span 12}
+    .metric{font-size:34px;font-weight:800;margin-top:8px}.label{color:var(--muted);font-size:13px;text-transform:uppercase;letter-spacing:.08em}
+    .delta{font-size:13px;margin-top:8px}.ok{color:var(--ok)}.warn{color:var(--warn)}.bad{color:var(--bad)}
+    .tabs{display:flex;gap:10px;flex-wrap:wrap}
+    .tab-pane{display:none}.tab-pane.active{display:block}
+    .section-title{margin:0 0 12px;font-size:18px}
+    .chip{padding:5px 10px;border-radius:999px;font-size:12px;border:1px solid var(--line);display:inline-block;margin-left:8px;color:var(--muted)}
+    .list{display:grid;gap:10px}.row{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;padding:12px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.02)}
+    .row small,.muted{color:var(--muted)} .sev{font-weight:700;border-radius:8px;padding:4px 8px;font-size:12px}
+    .s1{background:rgba(255,107,107,.15);color:#ffb3b3;border:1px solid rgba(255,107,107,.35)}
+    .s2{background:rgba(255,176,32,.15);color:#ffd28c;border:1px solid rgba(255,176,32,.35)}
+    .s3{background:rgba(110,168,254,.15);color:#cfe0ff;border:1px solid rgba(110,168,254,.35)}
+    table{width:100%;border-collapse:collapse} th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left;font-size:14px} th{color:var(--muted);font-weight:600}
+    .bars{display:grid;gap:10px} .barline{display:grid;grid-template-columns:160px 1fr 56px;gap:10px;align-items:center}
+    .bar{height:12px;background:#0d1430;border:1px solid var(--line);border-radius:999px;overflow:hidden}.fill{height:100%;background:linear-gradient(90deg,var(--accent),#8cf0c8)}
+    .legend{display:flex;gap:12px;flex-wrap:wrap;color:var(--muted);font-size:12px;margin-top:8px}.legend span::before{content:"";display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:6px;vertical-align:middle}
+    .l1::before{background:var(--bad)} .l2::before{background:var(--warn)} .l3::before{background:var(--ok)}
+    canvas{width:100%;height:280px;background:linear-gradient(180deg,rgba(255,255,255,.02),transparent);border-radius:14px;border:1px solid var(--line)}
+    .footer{color:var(--muted);font-size:12px;padding:6px 2px 0}
+    @media (max-width: 960px){ .span-3,.span-4,.span-5,.span-6,.span-7,.span-8{grid-column:span 12} header{position:static} }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Autonomous QA Dashboard</h1>
+  <div class="sub">A deploy-ready, interactive dashboard for running a modern QA function: daily issue/risk management, regressions, releases, customer impact, automation coverage, autonomy boundaries, and a roadmap from today’s practical automation to future-state autonomous QA.</div>
+  <div class="toolbar">
+    <select id="teamFilter"></select>
+    <select id="releaseFilter"></select>
+    <button id="refreshBtn">Refresh sample data</button>
+    <button class="active" data-tab="ops">Day-to-day QA</button>
+    <button data-tab="auto">Autonomy split</button>
+    <button data-tab="future">Not feasible yet</button>
+    <button data-tab="implemented">Already implemented</button>
+  </div>
+</header>
+<main>
+  <div class="grid">
+    <section class="card span-3"><div class="label">Open Issues</div><div id="mIssues" class="metric">0</div><div id="dIssues" class="delta"></div></section>
+    <section class="card span-3"><div class="label">Active Risks</div><div id="mRisks" class="metric">0</div><div id="dRisks" class="delta"></div></section>
+    <section class="card span-3"><div class="label">Regression Escapes</div><div id="mRegressions" class="metric">0</div><div id="dRegressions" class="delta"></div></section>
+    <section class="card span-3"><div class="label">Release Readiness</div><div id="mRelease" class="metric">0%</div><div id="dRelease" class="delta"></div></section>
+
+    <section class="card span-8">
+      <h2 class="section-title">QA Health Trend</h2>
+      <canvas id="trendChart" width="900" height="280"></canvas>
+      <div class="legend"><span class="l1">Critical Issues</span><span class="l2">Risks</span><span class="l3">Coverage</span></div>
+    </section>
+
+    <section class="card span-4">
+      <h2 class="section-title">Coverage by Layer</h2>
+      <div id="coverageBars" class="bars"></div>
+      <div class="footer">Includes API, UI, contract, accessibility, non-functional and synthetic monitoring.</div>
+    </section>
+
+    <section id="pane-ops" class="tab-pane active span-12">
+      <div class="grid">
+        <section class="card span-7">
+          <h2 class="section-title">How I would manage QA day to day</h2>
+          <div class="list" id="opsList"></div>
+        </section>
+        <section class="card span-5">
+          <h2 class="section-title">Highest-priority items</h2>
+          <div class="list" id="priorityList"></div>
+        </section>
+        <section class="card span-12">
+          <h2 class="section-title">Release cockpit</h2>
+          <table id="releaseTable"></table>
+        </section>
+      </div>
+    </section>
+
+    <section id="pane-auto" class="tab-pane span-12">
+      <div class="grid">
+        <section class="card span-6">
+          <h2 class="section-title">Can run autonomously today</h2>
+          <div class="list" id="autonomousList"></div>
+        </section>
+        <section class="card span-6">
+          <h2 class="section-title">Still needs human judgement</h2>
+          <div class="list" id="humanList"></div>
+        </section>
+      </div>
+    </section>
+
+    <section id="pane-future" class="tab-pane span-12">
+      <div class="grid">
+        <section class="card span-12">
+          <h2 class="section-title">What is not feasible yet — and when it may be</h2>
+          <table id="futureTable"></table>
+        </section>
+      </div>
+    </section>
+
+    <section id="pane-implemented" class="tab-pane span-12">
+      <div class="grid">
+        <section class="card span-12">
+          <h2 class="section-title">What I have already put into practice</h2>
+          <table id="implementedTable"></table>
+        </section>
+      </div>
+    </section>
+  </div>
+</main>
+<script>
+const dashboard = {
+  filters:{ teams:['All','Core QA','Platform','Mobile','Payments'], releases:['All','24.10','24.11','25.01'] },
+  summary:{ issues:34, issuesDelta:-6, risks:9, risksDelta:+2, regressions:3, regressionsDelta:-1, readiness:82, readinessDelta:+7 },
+  trend:[
+    {week:'W1', critical:8, risks:12, coverage:58},
+    {week:'W2', critical:6, risks:11, coverage:63},
+    {week:'W3', critical:5, risks:10, coverage:67},
+    {week:'W4', critical:5, risks:8, coverage:74},
+    {week:'W5', critical:4, risks:9, coverage:79},
+    {week:'W6', critical:3, risks:9, coverage:83}
+  ],
+  coverage:[
+    {name:'API', value:88},{name:'UI/Web', value:76},{name:'Mobile', value:64},{name:'Contract', value:82},{name:'A11y', value:58},{name:'Perf/Resilience', value:61},{name:'Synthetic journeys', value:71}
+  ],
+  ops:[
+    {title:'Issues', detail:'Auto-triage new defects by severity, component, customer-facing risk, and likely owner; age and reopen rate drive daily stand-up focus.'},
+    {title:'Risks', detail:'Maintain a live risk register with probability × impact scoring, release gates, mitigations, and unresolved requirement gaps.'},
+    {title:'Regressions', detail:'Run risk-based smoke + changed-component suites on every PR and nightly cross-journey regression on trunk.'},
+    {title:'Releases', detail:'Release cockpit combines open blockers, pass-rate, flaky-test debt, incident trend, rollout readiness, and rollback confidence.'},
+    {title:'Coverage', detail:'Track coverage by customer journey and risk, not just test count: auth, booking, payments, medical records, notifications, and offline recovery.'},
+    {title:'Customer impact', detail:'Join production defects to support tickets, app reviews, revenue impact, clinic volume, and affected pet-owner journeys.'},
+    {title:'QA health', detail:'One score blends escaped defects, MTTR, flaky rate, automation freshness, defect aging, and requirement ambiguity backlog.'}
+  ],
+  priorities:[
+    {sev:'S1', item:'Payment flow regression in 25.01 beta', why:'Revenue + trust + likely high frequency'},
+    {sev:'S1', item:'Release blocked by 2 unresolved crash defects', why:'Severe customer impact and store-review risk'},
+    {sev:'S2', item:'Unreadable booking confirmation on small screens', why:'High frequency usability defect'},
+    {sev:'S2', item:'15 flaky tests in mobile smoke pack', why:'False confidence delays releases'},
+    {sev:'S3', item:'A11y debt in profile setup', why:'Compliance and inclusivity risk'}
+  ],
+  releases:[
+    {release:'24.10', scope:'Maintenance', blockers:0, risks:2, pass:'97%', readiness:'Go'},
+    {release:'24.11', scope:'Booking improvements', blockers:1, risks:4, pass:'92%', readiness:'Conditional'},
+    {release:'25.01', scope:'Payments + pet records', blockers:2, risks:6, pass:'86%', readiness:'No-Go'}
+  ],
+  autonomous:[
+    {title:'Today', detail:'PR smoke testing, screenshot diffing, API/contract checks, data setup, bug dedupe suggestions, flaky-test quarantine, log anomaly detection, release scorecards, synthetic production journeys.'},
+    {title:'Near-term', detail:'AI-generated exploratory charters from change diff + telemetry, autonomous root-cause clustering, self-healing selectors where evidence is strong, model-based regression selection.'}
+  ],
+  human:[
+    {title:'Judgement-heavy work', detail:'Ambiguous requirements, UX quality, safety/legal judgement, true root cause confirmation, risk trade-offs, prioritisation across competing business goals.'},
+    {title:'Human-in-the-loop approvals', detail:'Release sign-off, severity downgrades for customer-visible defects, AI-generated test acceptance, and decisions on acceptable residual risk.'}
+  ],
+  future:[
+    {capability:'Fully autonomous end-to-end oracle for subjective UX quality', why:'Expected results remain ambiguous and context-dependent.', feasible:'2–4 years for narrow domains; still human-reviewed for consumer UX.'},
+    {capability:'Trustworthy autonomous prod hotfixing across complex systems', why:'High blast radius, compliance risk, and insufficient causality certainty.', feasible:'3–5 years in tightly sandboxed services first.'},
+    {capability:'Universal self-healing UI automation with no false positives', why:'DOM changes can mask real regressions.', feasible:'1–3 years for stable design systems, not all apps.'},
+    {capability:'Autonomous severity/prioritisation without business context', why:'Requires commercial, reputational, and legal trade-offs.', feasible:'Assistive now; decision autonomy likely 2+ years with policy guardrails.'}
+  ],
+  implemented:[
+    {area:'Risk-based automation', evidence:'Built API/UI smoke packs, selective regression by changed area, and nightly health reports.'},
+    {area:'Operational dashboards', evidence:'Tracked defects, release status, coverage, customer-impact views, and executive QA metrics.'},
+    {area:'CI quality gates', evidence:'Used pass-rate thresholds, blocker policies, stability trends, and release-exit criteria in delivery pipelines.'},
+    {area:'Telemetry-led QA', evidence:'Linked production incidents, logs, and support feedback back into regression priorities and defect triage.'},
+    {area:'AI-assisted workflows', evidence:'Used AI for test design acceleration, defect summary drafting, exploratory prompts, and report refinement with human review.'}
+  ]
+};
+
+const teamFilter = document.getElementById('teamFilter');
+const releaseFilter = document.getElementById('releaseFilter');
+function fillSelect(sel, arr){ sel.innerHTML = arr.map(v=>`<option>${v}</option>`).join(''); }
+fillSelect(teamFilter, dashboard.filters.teams); fillSelect(releaseFilter, dashboard.filters.releases);
+
+document.querySelectorAll('[data-tab]').forEach(btn=>btn.addEventListener('click',()=>{
+  document.querySelectorAll('[data-tab]').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
+  document.getElementById('pane-'+btn.dataset.tab).classList.add('active');
+}));
+
+function deltaText(n, positiveGood=true){
+  const cls = n===0 ? 'muted' : ((n>0)===positiveGood ? 'ok':'bad');
+  const prefix = n>0?'+':'';
+  return `<span class="${cls}">${prefix}${n}</span> vs previous period`;
+}
+function renderSummary(){
+  document.getElementById('mIssues').textContent = dashboard.summary.issues;
+  document.getElementById('dIssues').innerHTML = deltaText(dashboard.summary.issuesDelta, false);
+  document.getElementById('mRisks').textContent = dashboard.summary.risks;
+  document.getElementById('dRisks').innerHTML = deltaText(dashboard.summary.risksDelta, false);
+  document.getElementById('mRegressions').textContent = dashboard.summary.regressions;
+  document.getElementById('dRegressions').innerHTML = deltaText(dashboard.summary.regressionsDelta, false);
+  document.getElementById('mRelease').textContent = dashboard.summary.readiness + '%';
+  document.getElementById('dRelease').innerHTML = deltaText(dashboard.summary.readinessDelta, true);
+}
+function renderCoverage(){
+  document.getElementById('coverageBars').innerHTML = dashboard.coverage.map(c=>`
+    <div class="barline"><div>${c.name}</div><div class="bar"><div class="fill" style="width:${c.value}%"></div></div><div>${c.value}%</div></div>
+  `).join('');
+}
+function renderList(id, data, sev=false){
+  document.getElementById(id).innerHTML = data.map(x=>`
+    <div class="row"><div><div><strong>${x.title||x.item}</strong>${sev?` <span class="sev ${x.sev.toLowerCase()}">${x.sev}</span>`:''}</div><small>${x.detail||x.why}</small></div></div>
+  `).join('');
+}
+function renderReleaseTable(){
+  const rows = dashboard.releases.map(r=>`<tr><td>${r.release}</td><td>${r.scope}</td><td>${r.blockers}</td><td>${r.risks}</td><td>${r.pass}</td><td>${r.readiness}</td></tr>`).join('');
+  document.getElementById('releaseTable').innerHTML = `<thead><tr><th>Release</th><th>Scope</th><th>Blockers</th><th>Open Risks</th><th>Pass Rate</th><th>Readiness</th></tr></thead><tbody>${rows}</tbody>`;
+}
+function renderTable(id, arr, cols){
+  const thead = `<thead><tr>${cols.map(c=>`<th>${c.label}</th>`).join('')}</tr></thead>`;
+  const tbody = `<tbody>${arr.map(r=>`<tr>${cols.map(c=>`<td>${r[c.key]}</td>`).join('')}</tr>`).join('')}</tbody>`;
+  document.getElementById(id).innerHTML = thead + tbody;
+}
+function drawTrend(){
+  const c = document.getElementById('trendChart'); const ctx = c.getContext('2d');
+  ctx.clearRect(0,0,c.width,c.height);
+  const pad = {l:50,r:20,t:20,b:35}; const w = c.width-pad.l-pad.r; const h = c.height-pad.t-pad.b;
+  const maxY = 100; ctx.strokeStyle='rgba(170,182,211,.2)'; ctx.fillStyle='#aab6d3'; ctx.font='12px sans-serif';
+  for(let i=0;i<=5;i++){ const y = pad.t + (h*i/5); ctx.beginPath(); ctx.moveTo(pad.l,y); ctx.lineTo(c.width-pad.r,y); ctx.stroke(); const val = Math.round(maxY-(maxY*i/5)); ctx.fillText(val,pad.l-34,y+4); }
+  dashboard.trend.forEach((p,i)=>{const x=pad.l + (w*i/(dashboard.trend.length-1)); ctx.fillText(p.week,x-10,c.height-10);});
+  const series=[{k:'critical',color:'#ff6b6b'},{k:'risks',color:'#ffb020'},{k:'coverage',color:'#27c281'}];
+  series.forEach(s=>{
+    ctx.strokeStyle=s.color; ctx.lineWidth=3; ctx.beginPath();
+    dashboard.trend.forEach((p,i)=>{ const x=pad.l + (w*i/(dashboard.trend.length-1)); const y=pad.t + h - (p[s.k]/maxY*h); if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y); });
+    ctx.stroke();
+    dashboard.trend.forEach((p,i)=>{ const x=pad.l + (w*i/(dashboard.trend.length-1)); const y=pad.t + h - (p[s.k]/maxY*h); ctx.fillStyle=s.color; ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2); ctx.fill(); });
+  });
+}
+function mutateSample(){
+  dashboard.summary.issues = Math.max(18, dashboard.summary.issues + Math.round((Math.random()*8)-4));
+  dashboard.summary.issuesDelta = Math.round((Math.random()*8)-4);
+  dashboard.summary.risks = Math.max(4, dashboard.summary.risks + Math.round((Math.random()*4)-2));
+  dashboard.summary.risksDelta = Math.round((Math.random()*4)-2);
+  dashboard.summary.regressions = Math.max(0, dashboard.summary.regressions + Math.round((Math.random()*2)-1));
+  dashboard.summary.regressionsDelta = Math.round((Math.random()*4)-2);
+  dashboard.summary.readiness = Math.max(65, Math.min(96, dashboard.summary.readiness + Math.round((Math.random()*8)-4)));
+  dashboard.summary.readinessDelta = Math.round((Math.random()*10)-5);
+  dashboard.coverage = dashboard.coverage.map(c=>({...c, value: Math.max(35, Math.min(95, c.value + Math.round((Math.random()*10)-5)))}));
+  renderAll();
+}
+function renderAll(){
+  renderSummary(); renderCoverage(); drawTrend();
+  renderList('opsList', dashboard.ops); renderList('priorityList', dashboard.priorities, true);
+  renderReleaseTable(); renderList('autonomousList', dashboard.autonomous); renderList('humanList', dashboard.human);
+  renderTable('futureTable', dashboard.future, [{key:'capability',label:'Capability'},{key:'why',label:'Why not feasible yet'},{key:'feasible',label:'Likely feasibility window'}]);
+  renderTable('implementedTable', dashboard.implemented, [{key:'area',label:'Area'},{key:'evidence',label:'What has already been put into practice'}]);
+}
+renderAll();
+document.getElementById('refreshBtn').addEventListener('click', mutateSample);
+teamFilter.addEventListener('change', renderAll); releaseFilter.addEventListener('change', renderAll);
+</script>
+</body>
+</html>
