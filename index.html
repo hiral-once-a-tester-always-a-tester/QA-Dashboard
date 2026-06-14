@@ -135,7 +135,7 @@ products: ['All', 'Mobile App', 'Web App', 'Admin Portal'],
   teams: ['All', 'Identity', 'Booking', 'Clinic Search', 'Payments'],
   releases: ['All', '24.10', '24.11', '25.01']
 },
-  summary:{ issues:34, issuesDelta:-6, risks:9, risksDelta:+2, regressions:3, regressionsDelta:-1, readiness:82, readinessDelta:+7 },
+  summary:{ issues:35, issuesDelta:-5, risks:9, risksDelta:+2, regressions:3, regressionsDelta:-1, readiness:82, readinessDelta:+7 },
   trend:[
     {week:'W1', critical:8, risks:12, coverage:58},
     {week:'W2', critical:6, risks:11, coverage:63},
@@ -205,18 +205,19 @@ defects: [
     customerImpact: 45,
     frequency: "Low",
     area: "Location"
-  }
+  },
   {
-    id: "BUG-005",
-    title: "Cancellation policy not prompted before confirming the booking request",
-    product: "Mobile App",
-    team: "Booking",
-    release: "24.11",
-    severity: "S3",
-    status: "Open",
-    customerImpact: 45,
-    frequency: "Low",
-    area: "Appointments"
+    
+  id: "BUG-005",
+  title: "Cancellation policy not prompted before confirming the booking request",
+  product: "Mobile App",
+  team: "Booking",
+  release: "24.11",
+  severity: "S2",
+  status: "Open",
+  customerImpact: 70,
+  frequency: "Medium",
+  area: "Appointments"
   }
 ],
 
@@ -224,6 +225,7 @@ defects: [
     {sev:'S1', item:'Payment flow regression in 25.01 beta', why:'Revenue + trust + likely high frequency'},
     {sev:'S1', item:'Release blocked by 2 unresolved crash defects', why:'Severe customer impact and store-review risk'},
     {sev:'S2', item:'Unreadable booking confirmation on small screens', why:'High frequency usability defect'},
+    {sev:'S2', item:'Cancellation policy missing during booking confirmation', why:'Can cause confusion, complaints, and unexpected cancellation disputes'},
     {sev:'S2', item:'15 flaky tests in mobile smoke pack', why:'False confidence delays releases'},
     {sev:'S3', item:'A11y debt in profile setup', why:'Compliance and inclusivity risk'}
   ],
