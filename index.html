@@ -43,8 +43,9 @@
 <body>
 <header>
   <h1>Autonomous QA Dashboard</h1>
-  <div class="sub">A deploy-ready, interactive dashboard for running a modern QA function: daily issue/risk management, regressions, releases, customer impact, automation coverage, autonomy boundaries, and a roadmap from today’s practical automation to future-state autonomous QA.</div>
+  <div class="sub">An interactive dashboard for running a modern QA function: daily issue/risk management, regressions, releases, customer impact, automation coverage, autonomy boundaries, and a roadmap from today’s practical automation to future-state autonomous QA.</div>
   <div class="toolbar">
+    <select id="productFilter"></select>
     <select id="teamFilter"></select>
     <select id="releaseFilter"></select>
     <button id="refreshBtn">Refresh sample data</button>
@@ -60,6 +61,11 @@
     <section class="card span-3"><div class="label">Active Risks</div><div id="mRisks" class="metric">0</div><div id="dRisks" class="delta"></div></section>
     <section class="card span-3"><div class="label">Regression Escapes</div><div id="mRegressions" class="metric">0</div><div id="dRegressions" class="delta"></div></section>
     <section class="card span-3"><div class="label">Release Readiness</div><div id="mRelease" class="metric">0%</div><div id="dRelease" class="delta"></div></section>
+
+<section class="card span-12">
+  <h2 class="section-title">Defect Register</h2>
+  <table id="defectTable"></table>
+</section>
 
     <section class="card span-8">
       <h2 class="section-title">QA Health Trend</h2>
@@ -124,7 +130,11 @@
 </main>
 <script>
 const dashboard = {
-  filters:{ teams:['All','Core QA','Platform','Mobile','Payments'], releases:['All','24.10','24.11','25.01'] },
+  filters:{ 
+products: ['All', 'Mobile App', 'Web App', 'Admin Portal'],
+  teams: ['All', 'Identity', 'Booking', 'Clinic Search', 'Payments'],
+  releases: ['All', '24.10', '24.11', '25.01']
+},
   summary:{ issues:34, issuesDelta:-6, risks:9, risksDelta:+2, regressions:3, regressionsDelta:-1, readiness:82, readinessDelta:+7 },
   trend:[
     {week:'W1', critical:8, risks:12, coverage:58},
@@ -146,6 +156,58 @@ const dashboard = {
     {title:'Customer impact', detail:'Join production defects to support tickets, app reviews, revenue impact, clinic volume, and affected pet-owner journeys.'},
     {title:'QA health', detail:'One score blends escaped defects, MTTR, flaky rate, automation freshness, defect aging, and requirement ambiguity backlog.'}
   ],
+  
+efects: [
+  {
+    id: "BUG-001",
+    title: "Activation code not received during registration",
+    product: "Mobile App",
+    team: "Identity",
+    release: "25.01",
+    severity: "S1",
+    status: "Open",
+    customerImpact: 95,
+    frequency: "High",
+    area: "Registration"
+  },
+  {
+    id: "BUG-002",
+    title: "Booking notes missing on review page",
+    product: "Mobile App",
+    team: "Booking",
+    release: "25.01",
+    severity: "S2",
+    status: "In Progress",
+    customerImpact: 70,
+    frequency: "Medium",
+    area: "Appointments"
+  },
+  {
+    id: "BUG-003",
+    title: "Cannot cancel appointment in requested state",
+    product: "Mobile App",
+    team: "Booking",
+    release: "24.11",
+    severity: "S2",
+    status: "Open",
+    customerImpact: 75,
+    frequency: "Medium",
+    area: "Appointments"
+  },
+  {
+    id: "BUG-004",
+    title: "Map not displayed for selected grooming clinic",
+    product: "Mobile App",
+    team: "Clinic Search",
+    release: "24.11",
+    severity: "S3",
+    status: "Open",
+    customerImpact: 45,
+    frequency: "Low",
+    area: "Location"
+  }
+],
+
   priorities:[
     {sev:'S1', item:'Payment flow regression in 25.01 beta', why:'Revenue + trust + likely high frequency'},
     {sev:'S1', item:'Release blocked by 2 unresolved crash defects', why:'Severe customer impact and store-review risk'},
@@ -180,11 +242,13 @@ const dashboard = {
     {area:'AI-assisted workflows', evidence:'Used AI for test design acceleration, defect summary drafting, exploratory prompts, and report refinement with human review.'}
   ]
 };
-
+const productFilter = document.getElementById('productFilter');
 const teamFilter = document.getElementById('teamFilter');
 const releaseFilter = document.getElementById('releaseFilter');
 function fillSelect(sel, arr){ sel.innerHTML = arr.map(v=>`<option>${v}</option>`).join(''); }
-fillSelect(teamFilter, dashboard.filters.teams); fillSelect(releaseFilter, dashboard.filters.releases);
+fillSelect(productFilter, dashboard.filters.products);
+fillSelect(teamFilter, dashboard.filters.teams); 
+fillSelect(releaseFilter, dashboard.filters.releases);
 
 document.querySelectorAll('[data-tab]').forEach(btn=>btn.addEventListener('click',()=>{
   document.querySelectorAll('[data-tab]').forEach(b=>b.classList.remove('active'));
@@ -198,6 +262,14 @@ function deltaText(n, positiveGood=true){
   const prefix = n>0?'+':'';
   return `<span class="${cls}">${prefix}${n}</span> vs previous period`;
 }
+  
+function releaseClass(status) {
+  if (status === 'Go') return 'ok';
+  if (status === 'At Risk') return 'warn';
+  if (status === 'No-Go') return 'bad';
+  return 'muted';
+}
+
 function renderSummary(){
   document.getElementById('mIssues').textContent = dashboard.summary.issues;
   document.getElementById('dIssues').innerHTML = deltaText(dashboard.summary.issuesDelta, false);
@@ -208,6 +280,12 @@ function renderSummary(){
   document.getElementById('mRelease').textContent = dashboard.summary.readiness + '%';
   document.getElementById('dRelease').innerHTML = deltaText(dashboard.summary.readinessDelta, true);
 }
+function getFilteredDefects() {
+  return dashboard.defects.filter(d => {
+    const productMatch = productFilter.value === 'All' || d.product === productFilter.value;
+    const teamMatch = teamFilter.value === 'All' || d.team === teamFilter.value;
+    const releaseMatch = releaseFilter.value === 'All' || d.release === releaseFilter.value;
+    return productMatch && teamMatch &&
 function renderCoverage(){
   document.getElementById('coverageBars').innerHTML = dashboard.coverage.map(c=>`
     <div class="barline"><div>${c.name}</div><div class="bar"><div class="fill" style="width:${c.value}%"></div></div><div>${c.value}%</div></div>
@@ -219,7 +297,7 @@ function renderList(id, data, sev=false){
   `).join('');
 }
 function renderReleaseTable(){
-  const rows = dashboard.releases.map(r=>`<tr><td>${r.release}</td><td>${r.scope}</td><td>${r.blockers}</td><td>${r.risks}</td><td>${r.pass}</td><td>${r.readiness}</td></tr>`).join('');
+  const rows = dashboard.releases.map(r=>`<tr><td><strong class="${releaseClass(r.readiness)}">${r.readiness}</strong></td><td>${r.scope}</td><td>${r.blockers}</td><td>${r.risks}</td><td>${r.pass}</td><td>${r.readiness}</td></tr>`).join('');
   document.getElementById('releaseTable').innerHTML = `<thead><tr><th>Release</th><th>Scope</th><th>Blockers</th><th>Open Risks</th><th>Pass Rate</th><th>Readiness</th></tr></thead><tbody>${rows}</tbody>`;
 }
 function renderTable(id, arr, cols){
@@ -242,6 +320,42 @@ function drawTrend(){
     dashboard.trend.forEach((p,i)=>{ const x=pad.l + (w*i/(dashboard.trend.length-1)); const y=pad.t + h - (p[s.k]/maxY*h); ctx.fillStyle=s.color; ctx.beginPath(); ctx.arc(x,y,4,0,Math.PI*2); ctx.fill(); });
   });
 }
+    
+function renderDefectTable() {
+  const defects = getFilteredDefects();
+
+  const rows = defects.map(d => `
+    <tr>
+      <td>${d.id}</td>
+      <td>${d.title}</td>
+      <td>${d.product}</td>
+      <td>${d.team}</td>
+      <td>${d.release}</td>
+      <td><span class="sev ${d.severity.toLowerCase()}">${d.severity}</span></td>
+      <td>${d.status}</td>
+      <td>${d.customerImpact}</td>
+      <td>${d.frequency}</td>
+    </tr>
+  `).join('');
+
+  document.getElementById('defectTable').innerHTML = `
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Defect</th>
+        <th>Product</th>
+        <th>Team</th>
+        <th>Release</th>
+        <th>Severity</th>
+        <th>Status</th>
+        <th>Impact Score</th>
+        <th>Frequency</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  `;
+}
+
 function mutateSample(){
   dashboard.summary.issues = Math.max(18, dashboard.summary.issues + Math.round((Math.random()*8)-4));
   dashboard.summary.issuesDelta = Math.round((Math.random()*8)-4);
@@ -255,7 +369,7 @@ function mutateSample(){
   renderAll();
 }
 function renderAll(){
-  renderSummary(); renderCoverage(); drawTrend();
+  renderSummary(); renderCoverage(); drawTrend();renderDefectTable();
   renderList('opsList', dashboard.ops); renderList('priorityList', dashboard.priorities, true);
   renderReleaseTable(); renderList('autonomousList', dashboard.autonomous); renderList('humanList', dashboard.human);
   renderTable('futureTable', dashboard.future, [{key:'capability',label:'Capability'},{key:'why',label:'Why not feasible yet'},{key:'feasible',label:'Likely feasibility window'}]);
@@ -263,7 +377,9 @@ function renderAll(){
 }
 renderAll();
 document.getElementById('refreshBtn').addEventListener('click', mutateSample);
-teamFilter.addEventListener('change', renderAll); releaseFilter.addEventListener('change', renderAll);
+productFilter.addEventListener('change', renderAll);
+teamFilter.addEventListener('change', renderAll); 
+releaseFilter.addEventListener('change', renderAll);
 </script>
 </body>
 </html>
