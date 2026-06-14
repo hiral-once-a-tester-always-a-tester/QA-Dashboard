@@ -157,7 +157,7 @@ products: ['All', 'Mobile App', 'Web App', 'Admin Portal'],
     {title:'QA health', detail:'One score blends escaped defects, MTTR, flaky rate, automation freshness, defect aging, and requirement ambiguity backlog.'}
   ],
   
-efects: [
+defects: [
   {
     id: "BUG-001",
     title: "Activation code not received during registration",
@@ -265,7 +265,7 @@ function deltaText(n, positiveGood=true){
   
 function releaseClass(status) {
   if (status === 'Go') return 'ok';
-  if (status === 'At Risk') return 'warn';
+  if (status === 'At Risk' || status === 'Conditional') return 'warn';
   if (status === 'No-Go') return 'bad';
   return 'muted';
 }
@@ -280,12 +280,17 @@ function renderSummary(){
   document.getElementById('mRelease').textContent = dashboard.summary.readiness + '%';
   document.getElementById('dRelease').innerHTML = deltaText(dashboard.summary.readinessDelta, true);
 }
+
 function getFilteredDefects() {
   return dashboard.defects.filter(d => {
     const productMatch = productFilter.value === 'All' || d.product === productFilter.value;
     const teamMatch = teamFilter.value === 'All' || d.team === teamFilter.value;
     const releaseMatch = releaseFilter.value === 'All' || d.release === releaseFilter.value;
-    return productMatch && teamMatch &&
+
+    return productMatch && teamMatch && releaseMatch;
+  });
+}
+
 function renderCoverage(){
   document.getElementById('coverageBars').innerHTML = dashboard.coverage.map(c=>`
     <div class="barline"><div>${c.name}</div><div class="bar"><div class="fill" style="width:${c.value}%"></div></div><div>${c.value}%</div></div>
@@ -296,10 +301,34 @@ function renderList(id, data, sev=false){
     <div class="row"><div><div><strong>${x.title||x.item}</strong>${sev?` <span class="sev ${x.sev.toLowerCase()}">${x.sev}</span>`:''}</div><small>${x.detail||x.why}</small></div></div>
   `).join('');
 }
+
 function renderReleaseTable(){
-  const rows = dashboard.releases.map(r=>`<tr><td><strong class="${releaseClass(r.readiness)}">${r.readiness}</strong></td><td>${r.scope}</td><td>${r.blockers}</td><td>${r.risks}</td><td>${r.pass}</td><td>${r.readiness}</td></tr>`).join('');
-  document.getElementById('releaseTable').innerHTML = `<thead><tr><th>Release</th><th>Scope</th><th>Blockers</th><th>Open Risks</th><th>Pass Rate</th><th>Readiness</th></tr></thead><tbody>${rows}</tbody>`;
+  const rows = dashboard.releases.map(r => `
+    <tr>
+      <td>${r.release}</td>
+      <td>${r.scope}</td>
+      <td>${r.blockers}</td>
+      <td>${r.risks}</td>
+      <td>${r.pass}</td>
+      <td><strong class="${releaseClass(r.readiness)}">${r.readiness}</strong></td>
+    </tr>
+  `).join('');
+
+  document.getElementById('releaseTable').innerHTML = `
+    <thead>
+      <tr>
+        <th>Release</th>
+        <th>Scope</th>
+        <th>Blockers</th>
+        <th>Open Risks</th>
+        <th>Pass Rate</th>
+        <th>Readiness</th>
+      </tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  `;
 }
+
 function renderTable(id, arr, cols){
   const thead = `<thead><tr>${cols.map(c=>`<th>${c.label}</th>`).join('')}</tr></thead>`;
   const tbody = `<tbody>${arr.map(r=>`<tr>${cols.map(c=>`<td>${r[c.key]}</td>`).join('')}</tr>`).join('')}</tbody>`;
