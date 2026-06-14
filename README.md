@@ -1,25 +1,18 @@
 # Autonomous QA Dashboard (Vercel-ready)
 
-This package contains a self-contained interactive dashboard for an Autonomous QA function.
+An interactive dashboard showing QA health, risks, defects, regressions, release readiness, automation coverage, and autonomous QA opportunities.
 
-## Files
-- `autonomous_qa_dashboard.html` — single-file dashboard (HTML/CSS/JS)
-- `index.html` — same dashboard, renamed for static hosting
-- `vercel.json` — minimal Vercel config for static deployment
+## LIVE DEMO
+https://qa-dashboard-iwke1ie88-hiral-patel-s-projects.vercel.app
 
-## Deploy on Vercel
-1. Create a new GitHub repo and upload the files.
-2. In Vercel, import the repo.
-3. Deploy — Vercel will serve the static files automatically.
-4. Optional: drag-and-drop the folder into Vercel Drop for a quick prototype deployment.
+## Key Features
+- QA health KPI dashboard
+- Issue and risk tracking
+- Regression and release readiness view
+- Automation vs human judgment split
+- Future autonomous QA roadmap
+- Implemented QA practices
 
-## Customise
-- Edit the `dashboard` object inside `index.html` / `autonomous_qa_dashboard.html`.
-- Replace sample releases, risks, coverage values, implemented items, and future roadmap assumptions with your own.
+## Purpose
+This project demonstrates how an Autonomous QA function could be managed day to day using dashboards, automation, AI-assisted testing, and human-in-the-loop decision making.
 
-## Features
-- KPI cards: issues, risks, regressions, release readiness
-- Interactive tabs for day-to-day QA, autonomy split, feasibility roadmap, and implemented practices
-- Coverage bars and QA health trend chart
-- Prioritised issues and release cockpit view
-- Designed for leadership storytelling and practical team operations
